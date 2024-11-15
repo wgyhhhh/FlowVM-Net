@@ -24,30 +24,30 @@ The file format reference is as follows. (The image is a 24-bit png image. The m
 - './data/your_dataset/'
   - train
     - images
-      - train_001.png
-      - train_002.png
+      - 001.png
+      - 002.png
       - ...
     - masks
-      - train_001.png
-      - train_002.png
+      - 001.png
+      - 002.png
       - ...
   - val
     - images
-      - val_001.png
-      - val_002.png
+      - 001.png
+      - 002.png
       - ...
     - masks
-      - val_001.png
-      - val_002.png
+      - 001.png
+      - 002.png
       - ...
   - test
       - images
-        - test_001.png
-        - test_002.png
+        - 001.png
+        - 002.png
         - ...
       - masks
-        - test_001.png
-        - test_002.png
+        - 001.png
+        - 002.png
         - ...
 
 ## 2. Train the Flow VM-Net
