@@ -57,7 +57,8 @@ class NPY_datasets(Dataset):
         img = np.concatenate(imgs, axis=2)
         img1, img2 = img_paths[0], img_paths[1]
 
-        flow_path = f"cached_flow/{os.path.basename(img1)}_{os.path.basename(img2)}.npy"
+        dataset_type = 'train' if 'train' in img1 else 'val' if 'val' in img1 else 'test'
+        flow_path = f"cached_flow/{dataset_type}_{os.path.basename(img1)}_{os.path.basename(img2)}.npy"
         flow_dir = os.path.dirname(flow_path)
         if not os.path.exists(flow_dir):
             os.makedirs(flow_dir)
