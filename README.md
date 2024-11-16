@@ -50,7 +50,12 @@ The file format reference is as follows. (The image is a 24-bit png image. The m
         - 002.png
         - ...
 
-## 2. Train the Flow VM-Net
+## 2. Prepare the pre_trained weights
+
+- The weights of the pre-trained VMamba could be downloaded [here](https://github.com/MzeroMiko/VMamba)
+- The weights of the pre-trained Optical Flow model could be downloaded [here](https://drive.google.com/drive/folders/1YLovlvUW94vciWvTyLf-p3uWscbOQRWW)
+
+## 3. Train the Flow VM-Net
 ```
 python train.py
 ```
