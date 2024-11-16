@@ -54,7 +54,7 @@ The file format reference is as follows. (The image is a 24-bit png image. The m
 
 - The weights of the pre-trained VMamba could be downloaded [here](https://github.com/MzeroMiko/VMamba)
 - The weights of the pre-trained Optical Flow model could be downloaded [here](https://drive.google.com/drive/folders/1YLovlvUW94vciWvTyLf-p3uWscbOQRWW)
-
+After that, the pre-trained weights should be stored in './pre_trained_weights/'.
 ## 3. Train the Flow VM-Net
 ```
 python train.py
