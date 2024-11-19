@@ -1,6 +1,6 @@
 # FlowVM-Net
 
-|<img align="left" width="960" height="700" src="https://github.com/wgyhhhh/FlowVM-Net/blob/main/images234.jpg">|
+|<img align="left" width="900" height="700" src="https://github.com/wgyhhhh/FlowVM-Net/blob/main/images234.jpg">|
 |:--:|
 | **FlowVM-Net** |
 
