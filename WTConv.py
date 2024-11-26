@@ -178,11 +178,3 @@ class _ScaleModule(nn.Module):
 
 
 if __name__ == '__main__':
-    in_channels = 3
-    out_channels = 3
-
-    block = WTConv2d(in_channels, out_channels)
-    input = torch.rand(1, in_channels, 64, 64)
-    output = block(input)
-    print(input.size())
-    print(output.size())
