@@ -25,6 +25,8 @@ The .whl files of mamba_ssm could be found [here](https://pan.baidu.com/s/1VY19t
 
 **1. Datasets.**
 
+Note that you can download the datasets only after an ["Application to Use the Datasets from ARG for Fake News Detection"](https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAN__lChjFpUQjZSWkg4RjE2Q0lYSTNWNFYyQ1BMN1RROS4u) has been submitted.
+
 The file format reference is as follows. (The image is a 24-bit png image. The mask is an 8-bit png image. (0 pixel dots for background, 255 pixel dots for target))
 - './data/your_dataset/'
   - train
