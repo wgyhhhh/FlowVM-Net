@@ -283,9 +283,7 @@ def save_imgs(img, msk, msk_pred, i, save_path, datasets, threshold=0.5, test_da
     img = img.squeeze(0).permute(1, 2, 0).detach().cpu().numpy()
     img = img / 255. if img.max() > 1.1 else img
 
-    # 如果输入是多帧图像（即有12个通道），我们只提取其中的第一帧来显示
-    if img.shape[-1] == 9:
-        img = img[:, :, :3]  # 提取第一帧（前3个通道）
+    img = img[:, :, :3]
 
     if datasets == 'retinal':
         msk = np.squeeze(msk, axis=0)
