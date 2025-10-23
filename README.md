@@ -2,6 +2,11 @@
 
 This is the official code repository for "FlowVM-Net: Enhanced Vessel Segmentation in X-Ray Coronary Angiography Using Temporal Information Fusion", which is accpeted by **Journal of Imaging Informatics in Medicine** as a original paper!
 
+## Framework Overview
+
+![Framework Architecture](./framework.png)
+*Figure 1: The overall architecture of FlowVM-Net combining spatial features with temporal information*
+
 ## 0. Environments.
 ```bash
 conda create -n flowvmnet python=3.8
@@ -60,7 +65,7 @@ Data Format
 After that, the pre-trained weights should be stored in './pre_trained_weights/'.
 
 ```
-python train.py
+bash train.sh
 ```
 - After trianing, you could obtain the outputs in `` ./results/``
   
