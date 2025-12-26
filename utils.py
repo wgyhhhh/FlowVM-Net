@@ -33,44 +33,6 @@ def var_or_cuda(x, device=None):
 
     return x
 
-
-def warp(img0, flow):
-    # References:
-    # - https://github.com/NVlabs/PWC-Net/blob/master/PyTorch/models/PWCNet.py#L139
-    B, C, H, W = img0.size()
-
-    # 获取 img0 的设备
-    device = img0.device
-
-    # 在正确的设备上创建 grid
-    x_axis = torch.arange(0, W, device=device).view(1, -1).repeat(H, 1)
-    y_axis = torch.arange(0, H, device=device).view(-1, 1).repeat(1, W)
-    x_axis = x_axis.view(1, 1, H, W).repeat(B, 1, 1, 1)
-    y_axis = y_axis.view(1, 1, H, W).repeat(B, 1, 1, 1)
-    grid = torch.cat((x_axis, y_axis), 1).float()
-
-    # 确保 flow 和 img0 在同一个设备上
-    if flow.device != device:
-        flow = flow.to(device)
-
-    vgrid = grid + flow
-    # scale grid to [-1,1]
-    vgrid[:, 0, :, :] = 2.0 * vgrid[:, 0, :, :].clone() / max(W - 1, 1) - 1.0
-    vgrid[:, 1, :, :] = 2.0 * vgrid[:, 1, :, :].clone() / max(H - 1, 1) - 1.0
-
-    vgrid = vgrid.permute(0, 2, 3, 1)
-    # Fix issue: one of the variables needed for gradient computation has been
-    # modified by an inplace operation
-    img1 = F.grid_sample(img0.clone(), vgrid, align_corners=True)
-    mask = torch.ones(img0.size(), device=device)  # 直接在正确的设备上创建 mask
-    mask = F.grid_sample(mask, vgrid, align_corners=True)
-    mask[mask < 0.9999] = 0
-    mask[mask > 0] = 1
-
-    img1 = img1 * mask
-    return mask
-
-
 def set_seed(seed):
     # for hash
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -283,7 +245,8 @@ def save_imgs(img, msk, msk_pred, i, save_path, datasets, threshold=0.5, test_da
     img = img.squeeze(0).permute(1, 2, 0).detach().cpu().numpy()
     img = img / 255. if img.max() > 1.1 else img
 
-    img = img[:, :, :3]
+
+    img = img[:, :, :3]  # 提取第一帧（前3个通道）
 
     if datasets == 'retinal':
         msk = np.squeeze(msk, axis=0)
@@ -415,11 +378,13 @@ class CompoundLoss(nn.Module):
         self.alpha_max = alpha_max
         self.epoch = 0
         self.bce_loss=nn.BCELoss()
+
     def forward(self, pred, target):
         dice_loss = self.dice_loss(pred, target)
         surface_loss = self.surface_loss(pred, target)
         bce_loss = self.bce_loss(pred, target)
         compound_loss = dice_loss + bce_loss+ self.alpha * surface_loss
+        
         return compound_loss, surface_loss
 
     def update_alpha(self):

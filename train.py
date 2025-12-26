@@ -12,19 +12,15 @@ from core.utils.utils import load_ckpt
 from dataset import NPY_datasets
 from tensorboardX import SummaryWriter
 from models.flowvmnet import FlowVM_Net
-from configs.config_setting import parse_args
+from configs.config_setting import json_to_args
 from engine import *
+from argparse import Namespace
 
 warnings.filterwarnings("ignore")
 
 def parse_all_args():
+    """解析所有训练参数"""
     parser = argparse.ArgumentParser(description='Training script')
-
-    # Flow Generation Parameters
-    parser.add_argument('--cfg', help='experiment configure file name', default='./configs/spring-M.json', type=str)
-    parser.add_argument('--model', help='checkpoint path',
-                        default='./pre_trained_weights/Tartan-C-T-TSKH-spring540x960-M.pth', type=str)
-    parser.add_argument('--device', help='inference device', type=str, default='cpu')
 
     # Training Parameters
     parser.add_argument('--data_path', type=str, default=None, help='Path to dataset')
@@ -32,8 +28,15 @@ def parse_all_args():
     parser.add_argument('--epochs', type=int, default=None, help='Number of epochs')
     parser.add_argument('--num_frames', type=int, default=None, help='Number of frames')
     parser.add_argument('--num_classes', type=int, default=None, help='Number of classes')
-    parser.add_argument('--gpu_id', type=str, default=None, help='GPU ID')
+    parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID') 
     parser.add_argument('--work_dir', type=str, default=None, help='Working directory')
+    
+    # RAFT Parameters 
+    parser.add_argument('--cfg', type=str, default='./configs/spring-M.json', 
+                       help='RAFT config file path')
+    parser.add_argument('--model', type=str, 
+                       default='./pre_trained_weights/Tartan-C-T-TSKH-spring540x960-M.pth', 
+                       help='RAFT model checkpoint path')
 
     return parser.parse_args()
 
@@ -41,46 +44,21 @@ def parse_all_args():
 def main(config):
     # Parse all arguments
     args = parse_all_args()
-
     print('#----------Preparing Flow Generation Module----------#')
 
-    # Update config with command-line arguments
-    if args.data_path is not None:
-        config.data_path = args.data_path
-    if args.batch_size is not None:
-        config.batch_size = args.batch_size
-    if args.epochs is not None:
-        config.epochs = args.epochs
-    if args.num_frames is not None:
-        config.num_frames = args.num_frames
-    if args.num_classes is not None:
-        config.num_classes = args.num_classes
-    if args.gpu_id is not None:
-        config.gpu_id = args.gpu_id
-    if args.work_dir is not None:
-        config.work_dir = args.work_dir
-
-    raft_parser = argparse.ArgumentParser()
-    raft_parser.add_argument('--cfg', help='experiment configure file name', default='./configs/spring-M.json',
-                             type=str)
-    raft_parser.add_argument('--model', help='checkpoint path',
-                             default='./pre_trained_weights/Tartan-C-T-TSKH-spring540x960-M.pth', type=str)
-    raft_parser.add_argument('--device', help='inference device', type=str, default='cpu')
-
-    original_argv = sys.argv
-    try:
-        raft_argv = ['train.py']
-        if hasattr(args, 'cfg') and args.cfg:
-            raft_argv.extend(['--cfg', args.cfg])
-        if hasattr(args, 'model') and args.model:
-            raft_argv.extend(['--model', args.model])
-        if hasattr(args, 'device') and args.device:
-            raft_argv.extend(['--device', args.device])
-
-        sys.argv = raft_argv
-        raft_args = parse_args(raft_parser)
-    finally:
-        sys.argv = original_argv
+    # FlowVM-Net config args
+    config.data_path = args.data_path
+    config.batch_size = args.batch_size
+    config.epochs = args.epochs
+    config.num_frames = args.num_frames
+    config.num_classes = args.num_classes
+    config.gpu_id = args.gpu_id
+    device_str = f'cuda:{args.gpu_id}' if torch.cuda.is_available() else 'cpu'
+    
+    # RAFT model args
+    raft_args = json_to_args(args.cfg)
+    raft_args.model = args.model
+    raft_args.device = device_str
 
     # Initialize RAFT model
     raft_model = RAFT(raft_args)
@@ -125,7 +103,7 @@ def main(config):
                               num_workers=config.num_workers)
     val_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes, train=False)
     val_loader = DataLoader(val_dataset,
-                            batch_size=1,
+                            batch_size=config.batch_size,
                             shuffle=False,
                             pin_memory=True,
                             num_workers=config.num_workers,
@@ -183,6 +161,7 @@ def main(config):
     print('#----------Training----------#')
     for epoch in range(start_epoch, config.epochs + 1):
 
+        print(f'#---------- Epoch {epoch} ----------#')
         step = train_one_epoch(
             train_loader,
             model,
@@ -197,6 +176,7 @@ def main(config):
             device
         )
 
+        print('#----------Validation----------#')
         loss = val_one_epoch(
             val_loader,
             model,

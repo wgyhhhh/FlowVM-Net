@@ -9,8 +9,9 @@ from utils import save_imgs
 def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch, step, logger, config, writer, device):
     model.train()
     total_loss_list,  surface_loss_list = [], []
+    train_data_iter = tqdm(train_loader)
 
-    for iter, data in enumerate(train_loader):
+    for iter, data in enumerate(train_data_iter):
         step += iter
         optimizer.zero_grad()
         images, targets = data
@@ -34,7 +35,7 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
         if iter % config.print_interval == 0:
             log_info = f'train: epoch {epoch}, iter:{iter}, total_loss: {np.mean(total_loss_list):.4f}, surface_loss: {np.mean(surface_loss_list):.4f}, ' \
                        f'lr: {now_lr}, alpha: {criterion.get_current_alpha():.4f}'
-            print(log_info)
+            #print(log_info)
             logger.info(log_info)
 
     scheduler.step()
