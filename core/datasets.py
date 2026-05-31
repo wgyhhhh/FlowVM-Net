@@ -15,7 +15,6 @@ import os.path as osp
 from core.utils import frame_utils
 from core.utils.augmentor import FlowAugmentor, SparseFlowAugmentor
 from core.utils.utils import induced_flow, check_cycle_consistency
-from ddp_utils import *
 
 class FlowDataset(data.Dataset):
     def __init__(self, aug_params=None, sparse=False):

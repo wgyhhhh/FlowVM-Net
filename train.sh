@@ -1,6 +1,6 @@
 #!/bin/bash
 python train.py \
-    --data_path "./data/vessel/" \
+    --data_path "./data/XCAV_DIAS/" \
     --batch_size 16 \
     --epochs 300 \
     --num_frames 2 \

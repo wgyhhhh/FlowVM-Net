@@ -12,7 +12,7 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
     train_data_iter = tqdm(train_loader)
 
     for iter, data in enumerate(train_data_iter):
-        step += iter
+        step += 1
         optimizer.zero_grad()
         images, targets = data
 
@@ -73,7 +73,7 @@ def val_one_epoch(test_loader, model, criterion, epoch, logger, config, device):
         y_pre = np.where(preds >= config.threshold, 1, 0)
         y_true = np.where(gts >= 0.5, 1, 0)
 
-        confusion = confusion_matrix(y_true, y_pre)
+        confusion = confusion_matrix(y_true, y_pre, labels=[0, 1])
         TN, FP, FN, TP = confusion[0, 0], confusion[0, 1], confusion[1, 0], confusion[1, 1]
 
         accuracy = float(TN + TP) / float(np.sum(confusion)) if float(np.sum(confusion)) != 0 else 0
@@ -127,7 +127,7 @@ def test_one_epoch(test_loader, model, criterion, logger, config, device, test_d
         y_pre = np.where(preds >= config.threshold, 1, 0)
         y_true = np.where(gts >= 0.5, 1, 0)
 
-        confusion = confusion_matrix(y_true, y_pre)
+        confusion = confusion_matrix(y_true, y_pre, labels=[0, 1])
         TN, FP, FN, TP = confusion[0, 0], confusion[0, 1], confusion[1, 0], confusion[1, 1]
 
         accuracy = float(TN + TP) / float(np.sum(confusion)) if float(np.sum(confusion)) != 0 else 0

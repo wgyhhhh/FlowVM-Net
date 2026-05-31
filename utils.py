@@ -301,7 +301,8 @@ def get_boundary_pp(pic, is_mask):
     return torch.from_numpy(pic - mask_erode)
 
 def cal_params_flops(model, size, logger):
-    input = torch.randn(1, 3, size, size).cuda()
+    device = next(model.parameters()).device
+    input = torch.randn(1, 3, size, size, device=device)
     flops, params = profile(model, inputs=(input,))
     print('flops',flops/1e9)
     print('params',params/1e6)
@@ -470,9 +471,13 @@ class BoundaryDoULoss(nn.Module):
         return loss
 
     def forward(self, inputs, target):
+        if inputs.size(1) == 1:
+            score = inputs.clamp(min=1e-6, max=1 - 1e-6)[:, 0]
+            target = (target[:, 0] > 0.5).float()
+            return self._adaptive_size(score, target)
+
         inputs = torch.softmax(inputs, dim=1)
-        target = self._one_hot_encoder(target)
-        target = target.squeeze(2)
+        target = self._one_hot_encoder(target.squeeze(1).long())
         assert inputs.size() == target.size(), \
             f'predict {inputs.size()} & target {target.size()} shape do not match'
 
@@ -549,10 +554,25 @@ class myNormalize:
 
     def __call__(self, data):
         img, msk = data
-        img_normalized = (img - self.mean) / self.std
-        img_normalized = ((img_normalized - np.min(img_normalized))
-                          / (np.max(img_normalized) - np.min(img_normalized))) * 255.
-        return img_normalized, msk
+        has_flow = img.ndim == 3 and img.shape[2] > 3
+        if has_flow:
+            image = img[..., :-2]
+            flow = img[..., -2:]
+        else:
+            image = img
+            flow = None
+
+        image_normalized = (image - self.mean) / self.std
+        denominator = np.max(image_normalized) - np.min(image_normalized)
+        if denominator == 0:
+            image_normalized = np.zeros_like(image_normalized)
+        else:
+            image_normalized = ((image_normalized - np.min(image_normalized))
+                                / denominator) * 255.
+
+        if flow is not None:
+            return np.concatenate((image_normalized, flow), axis=2), msk
+        return image_normalized, msk
 
 
 def create_wavelet_filter(wave, in_size, out_size, type=torch.float):

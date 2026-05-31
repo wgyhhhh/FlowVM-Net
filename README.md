@@ -29,35 +29,29 @@ The .whl files of causal_conv1d could be found [here](https://github.com/Dao-AIL
 Data Format
 
 ```
-├── './data/your_dataset/'
-    ├── train
+├── './data/XCAV_DIAS/'
+    ├── training
         ├── images
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
-        ├── masks
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
-    ├── val
+            ├── image_s000002_i0.png
+            ├── image_s000002_i1.png
+            └── ... # image_{sequence_id}_i{frame_index}.png
+        ├── labels
+            ├── image_s000002_i1.png
+            └── ... # same filename as target frame is preferred
+    ├── validation
         ├── images
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
-        ├── masks
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
+        ├── labels
     ├── test
         ├── images
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
-        ├── masks
-            ├── 001.png
-            ├── 002.png
-            └── ... # {id}.png 
+        ├── labels
 ```
+
+The loader groups frames by the part before `_i{frame_index}`. For example,
+`image_s000002_i0.png` and `image_s000002_i1.png` are treated as one temporal
+sequence. The label for each sample is matched against the last frame in the
+window first, then against sequence-level names such as `image_s000002.png` or
+`label_s000002.png`. The old `train/val/test` and `masks` naming scheme is still
+supported for compatibility.
 
 ## 2. Train the FlowVM-Net.
 - The weights of the pre-trained VMamba could be downloaded [here](https://drive.usercontent.google.com/download?id=1uUPsr7XeqayCxlspqBHbg5zIWx0JYtSX&export=download&authuser=0&confirm=t&uuid=8f3d1bcd-cd88-4ca1-a758-7049c1ebc144&at=AN_67v29VPGaI2TjZsEPsB3Z7y3h%3A1727950609222).
@@ -66,13 +60,14 @@ After that, the pre-trained weights should be stored in './pre_trained_weights/'
 
 ```
 bash train.sh
+# or
+python train.py --data_path /path/to/XCAV_DIAS --gpu_id 0
 ```
 - After trianing, you could obtain the outputs in `` ./results/``
   
 ## 3. Test the FlowVM-Net.
-First, in the testing.py file, you should change the address of the checkpoint in 'checkpoint path'.
 ```
-python testing.py
+python testing.py --data_path /path/to/XCAV_DIAS --checkpoint_path /path/to/best.pth --gpu_id 0
 ```
 
 ## 4. Citation

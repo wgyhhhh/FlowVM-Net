@@ -1,34 +1,26 @@
 from .vmamba import VSSM, SimpleFlowExtractor
 import torch
 from torch import nn
-import torch.nn.functional as F
-from configs.config_setting import setting_config
 
 class FlowVM_Net(nn.Module):
-    config = setting_config()
     def __init__(self, input_channels, num_classes, num_frames, depths, depths_decoder, drop_path_rate, load_ckpt_path=None):
         super().__init__()
 
+        self.input_channels = input_channels
+        self.num_classes = num_classes
+        self.depths = depths
+        self.depths_decoder = depths_decoder
+        self.drop_path_rate = drop_path_rate
         self.load_ckpt_path = load_ckpt_path
-        self.input_channels = setting_config.input_channels
-        self.num_classes = setting_config.num_classes
-        self.depths = setting_config.depths
-        self.depths_decoder = setting_config.depths_decoder
-        self.drop_path_rate = setting_config.drop_path_rate
-        self.load_ckpt_path = setting_config.load_ckpt_path
-        self.num_frames = setting_config.num_frames
-
-        gpu_id = setting_config.gpu_id
-        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
+        self.num_frames = num_frames
 
         self.conv = nn.Conv2d(in_channels = self.num_frames * 3 , out_channels=3, kernel_size=3, padding=1, bias=False)
         self.batchnorm2d = nn.BatchNorm2d(self.input_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.flow_feature_extractor = SimpleFlowExtractor().to(self.device)
-        self.flowvmnet = VSSM(in_chans=input_channels, num_classes=num_classes, depths=depths, depths_decoder=depths_decoder, drop_path_rate=drop_path_rate).to(self.device)  # 将模型移动到 GPU
+        self.flow_feature_extractor = SimpleFlowExtractor()
+        self.flowvmnet = VSSM(in_chans=input_channels, num_classes=num_classes, depths=depths, depths_decoder=depths_decoder, drop_path_rate=drop_path_rate)
 
     def forward(self, x):
-        x = x.to(self.device)
         flow_features = None
 
         if x.size(1) == self.input_channels * self.num_frames + 2:
@@ -52,7 +44,7 @@ class FlowVM_Net(nn.Module):
     def load_from(self):
         if self.load_ckpt_path is not None:
             model_dict = self.flowvmnet.state_dict()
-            modelCheckpoint = torch.load(self.load_ckpt_path)
+            modelCheckpoint = torch.load(self.load_ckpt_path, map_location='cpu')
             pretrained_dict = modelCheckpoint['model']
 
             new_dict = {k: v for k, v in pretrained_dict.items() if

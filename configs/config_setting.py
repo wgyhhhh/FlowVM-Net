@@ -27,7 +27,7 @@ class setting_config:
 
     datasets = 'vessel'
     if datasets == 'vessel':
-        data_path = './data/vessel/'
+        data_path = './data/XCAV_DIAS/'
     else:
         raise Exception('datasets in not right!')
 
@@ -53,6 +53,7 @@ class setting_config:
     epochs =300
     work_dir = 'results/'  + '_' + datasets + '_' + datetime.now().strftime('%A_%d_%B_%Y_%Hh_%Mm_%Ss') + '/'
     test_dir = 'results/' + ''
+    flow_cache_dir = './cached_flow/'
     print_interval = 20
     val_interval = 30
     save_interval = 100

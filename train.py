@@ -14,9 +14,23 @@ from tensorboardX import SummaryWriter
 from models.flowvmnet import FlowVM_Net
 from configs.config_setting import json_to_args
 from engine import *
-from argparse import Namespace
 
 warnings.filterwarnings("ignore")
+
+
+def apply_cli_overrides(config, args):
+    for name in ('data_path', 'batch_size', 'epochs', 'num_frames', 'num_classes', 'gpu_id', 'work_dir'):
+        value = getattr(args, name)
+        if value is not None:
+            setattr(config, name, value)
+    return config
+
+
+def resolve_device(gpu_id):
+    if torch.cuda.is_available():
+        return torch.device(f"cuda:{int(gpu_id)}")
+    return torch.device("cpu")
+
 
 def parse_all_args():
     """解析所有训练参数"""
@@ -28,7 +42,7 @@ def parse_all_args():
     parser.add_argument('--epochs', type=int, default=None, help='Number of epochs')
     parser.add_argument('--num_frames', type=int, default=None, help='Number of frames')
     parser.add_argument('--num_classes', type=int, default=None, help='Number of classes')
-    parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID') 
+    parser.add_argument('--gpu_id', type=int, default=None, help='GPU ID') 
     parser.add_argument('--work_dir', type=str, default=None, help='Working directory')
     
     # RAFT Parameters 
@@ -44,29 +58,20 @@ def parse_all_args():
 def main(config):
     # Parse all arguments
     args = parse_all_args()
+    apply_cli_overrides(config, args)
+    device = resolve_device(config.gpu_id)
     print('#----------Preparing Flow Generation Module----------#')
 
-    # FlowVM-Net config args
-    config.data_path = args.data_path
-    config.batch_size = args.batch_size
-    config.epochs = args.epochs
-    config.num_frames = args.num_frames
-    config.num_classes = args.num_classes
-    config.gpu_id = args.gpu_id
-    device_str = f'cuda:{args.gpu_id}' if torch.cuda.is_available() else 'cpu'
-    
     # RAFT model args
     raft_args = json_to_args(args.cfg)
     raft_args.model = args.model
-    raft_args.device = device_str
+    raft_args.device = str(device)
 
     # Initialize RAFT model
     raft_model = RAFT(raft_args)
     load_ckpt(raft_model, raft_args.model)
 
     # Set device for RAFT model
-    gpu_id = int(config.gpu_id)
-    device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
     raft_model = raft_model.to(device)
     raft_model.eval()
 
@@ -84,7 +89,7 @@ def main(config):
     global logger
     logger = get_logger('train', log_dir)
     global writer
-    writer = SummaryWriter(config.work_dir + 'summary')
+    writer = SummaryWriter(os.path.join(config.work_dir, 'summary'))
 
     log_config_info(config, logger)
 
@@ -95,25 +100,27 @@ def main(config):
     print('#----------Preparing dataset----------#')
     num_frames = config.num_frames
     num_classes = config.num_classes
-    train_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes, train=True)
+    train_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes,
+                                 train=True, device=device)
     train_loader = DataLoader(train_dataset,
                               batch_size=config.batch_size,
                               shuffle=True,
-                              pin_memory=True,
+                              pin_memory=torch.cuda.is_available(),
                               num_workers=config.num_workers)
-    val_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes, train=False)
+    val_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes,
+                               train=False, device=device)
     val_loader = DataLoader(val_dataset,
                             batch_size=config.batch_size,
                             shuffle=False,
-                            pin_memory=True,
+                            pin_memory=torch.cuda.is_available(),
                             num_workers=config.num_workers,
                             drop_last=True)
     test_dataset = NPY_datasets(config.data_path, config, raft_model, raft_args, num_frames, num_classes, train=False,
-                                Test=True)
+                                device=device, Test=True)
     test_loader = DataLoader(test_dataset,
                              batch_size=1,
                              shuffle=False,
-                             pin_memory=True,
+                             pin_memory=torch.cuda.is_available(),
                              num_workers=config.num_workers,
                              drop_last=True)
 
@@ -121,16 +128,14 @@ def main(config):
 
     model = FlowVM_Net(
         num_classes=config.num_classes,
-        input_channels=setting_config.input_channels,
+        input_channels=config.input_channels,
         num_frames=config.num_frames,
-        depths=setting_config.depths,
-        depths_decoder=setting_config.depths_decoder,
-        drop_path_rate=setting_config.drop_path_rate,
-        load_ckpt_path=setting_config.load_ckpt_path,
+        depths=config.depths,
+        depths_decoder=config.depths_decoder,
+        drop_path_rate=config.drop_path_rate,
+        load_ckpt_path=config.load_ckpt_path,
     )
     model.load_from()
-    gpu_id = int(config.gpu_id)
-    device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     cal_params_flops(model, 256, logger)
 
@@ -205,7 +210,7 @@ def main(config):
 
     if os.path.exists(os.path.join(checkpoint_dir, 'best.pth')):
         print('#----------Testing----------#')
-        best_weight = torch.load(config.work_dir + 'checkpoints/best.pth', map_location=torch.device('cpu'))
+        best_weight = torch.load(os.path.join(checkpoint_dir, 'best.pth'), map_location=torch.device('cpu'))
         model.load_state_dict(best_weight)
         loss = test_one_epoch(
             test_loader,
