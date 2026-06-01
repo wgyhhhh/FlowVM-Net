@@ -47,11 +47,13 @@ Data Format
 ```
 
 The loader groups frames by the part before `_i{frame_index}`. For example,
-`image_s000002_i0.png` and `image_s000002_i1.png` are treated as one temporal
-sequence. The label for each sample is matched against the last frame in the
-window first, then against sequence-level names such as `image_s000002.png` or
-`label_s000002.png`. The old `train/val/test` and `masks` naming scheme is still
-supported for compatibility.
+`image_s000002_i1.png` through `image_s000002_i5.png` are treated as one
+temporal sequence. If the label is sequence-level, such as `image_s000002.png`,
+it is matched only with the window ending at the final frame. With
+`num_frames=2`, that sample is `i4 + i5 -> image_s000002.png`, not `i0 + i1` or
+`i1 + i2`. Frame-level labels such as `image_s000002_i5.png` are still supported.
+The old `train/val/test` and `masks` naming scheme is still supported for
+compatibility.
 
 ## 2. Train the FlowVM-Net.
 - The weights of the pre-trained VMamba could be downloaded [here](https://drive.usercontent.google.com/download?id=1uUPsr7XeqayCxlspqBHbg5zIWx0JYtSX&export=download&authuser=0&confirm=t&uuid=8f3d1bcd-cd88-4ca1-a758-7049c1ebc144&at=AN_67v29VPGaI2TjZsEPsB3Z7y3h%3A1727950609222).

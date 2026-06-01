@@ -76,32 +76,49 @@ class NPY_datasets(Dataset):
             return match.group(1), int(match.group(2))
         return stem, 0
 
-    def _find_label_path(self, label_dir, labels, target_image_name, sequence_key):
+    def _label_lookup(self, labels):
+        return {name.lower(): name for name in labels}
+
+    def _frame_label_path(self, label_dir, label_lookup, target_image_name):
         stem, ext = os.path.splitext(target_image_name)
         candidate_names = [
             target_image_name,
             target_image_name.replace('image_', 'label_', 1),
-            f'{sequence_key}{ext}',
-            f'{sequence_key}.png',
-            f'{sequence_key.replace("image_", "label_", 1)}{ext}',
-            f'{sequence_key.replace("image_", "label_", 1)}.png',
         ]
 
-        label_lookup = {name.lower(): name for name in labels}
         for candidate in candidate_names:
             match = label_lookup.get(candidate.lower())
             if match is not None:
                 return os.path.join(label_dir, match)
 
-        raise FileNotFoundError(
-            f"Could not find label for image '{target_image_name}' in {label_dir}. "
-            f"Tried sequence key '{sequence_key}'."
-        )
+        return None
+
+    def _sequence_label_path(self, label_dir, label_lookup, sequence_key):
+        candidate_names = [
+            f'{sequence_key}.png',
+            f'{sequence_key}.jpg',
+            f'{sequence_key}.jpeg',
+            f'{sequence_key}.tif',
+            f'{sequence_key}.tiff',
+            f'{sequence_key.replace("image_", "label_", 1)}.png',
+            f'{sequence_key.replace("image_", "label_", 1)}.jpg',
+            f'{sequence_key.replace("image_", "label_", 1)}.jpeg',
+            f'{sequence_key.replace("image_", "label_", 1)}.tif',
+            f'{sequence_key.replace("image_", "label_", 1)}.tiff',
+        ]
+
+        for candidate in candidate_names:
+            match = label_lookup.get(candidate.lower())
+            if match is not None:
+                return os.path.join(label_dir, match)
+
+        return None
 
     def _build_samples(self, split):
         image_dir, label_dir = self._split_dirs(split)
         images = self._valid_files(image_dir)
         labels = self._valid_files(label_dir)
+        label_lookup = self._label_lookup(labels)
 
         grouped = defaultdict(list)
         for image_name in images:
@@ -114,11 +131,22 @@ class NPY_datasets(Dataset):
             if len(frames) < self.num_frames:
                 continue
 
+            sequence_label = self._sequence_label_path(label_dir, label_lookup, sequence_key)
+            if sequence_label is not None:
+                last_window = frames[-self.num_frames:]
+                img_paths = [os.path.join(image_dir, name) for name in last_window]
+                samples.append((split, img_paths, sequence_label))
+                continue
+
             for start in range(0, len(frames) - self.num_frames + 1, self.num_frames):
                 window = frames[start:start + self.num_frames]
                 target_image_name = window[-1]
                 img_paths = [os.path.join(image_dir, name) for name in window]
-                label_path = self._find_label_path(label_dir, labels, target_image_name, sequence_key)
+                label_path = self._frame_label_path(label_dir, label_lookup, target_image_name)
+                if label_path is None:
+                    raise FileNotFoundError(
+                        f"Could not find frame label for image '{target_image_name}' in {label_dir}."
+                    )
                 samples.append((split, img_paths, label_path))
 
         return samples
